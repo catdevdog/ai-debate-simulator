@@ -20,9 +20,17 @@ export async function POST(req: NextRequest) {
       max_tokens: 500,
     });
 
-    return NextResponse.json({
-      result: response.content[0]?.text || "",
-    });
+    const result = response.content[0];
+
+    if (result.type === "text") {
+      return NextResponse.json({
+        result: result.text,
+      });
+    } else {
+      return NextResponse.json({
+        result: "", // 또는 fallback 처리
+      });
+    }
   } catch (error) {
     console.error("[Claude API ERROR]", error);
     return NextResponse.json(
