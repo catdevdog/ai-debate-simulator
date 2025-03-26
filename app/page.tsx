@@ -2,7 +2,7 @@
 
 // import Image from "next/image";
 import { useState } from "react";
-import styles from "./page.module.css";
+import styles from "./page.module.scss";
 import { AI } from "@/api/ai";
 
 type TypeAnswer = {
@@ -22,18 +22,24 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
-      <h1>Hello World!</h1>
-      <input type="text" onChange={(e) => setText(e.target.value)} />
-      <button onClick={getResponse}>질문</button>
+      <div className={styles.wrap}>
+        <textarea
+          className={styles.request}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <button className={styles.button} onClick={getResponse}>
+          토론 시작
+        </button>
 
-      {answer && (
-        <div>
-          <h2>OpenAI</h2>
-          <p>{answer.result_gpt}</p>
-          <h2>Anthropic</h2>
-          <p>{answer.result_claude}</p>
-        </div>
-      )}
+        {answer && (
+          <div>
+            <h2>OpenAI</h2>
+            <p>{answer.result_gpt}</p>
+            <h2>Anthropic</h2>
+            <p>{answer.result_claude}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
