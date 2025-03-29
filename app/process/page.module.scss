@@ -1,0 +1,117 @@
+.container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+}
+
+.debateContainer {
+  width: 72rem;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.debateHeader {
+  margin-bottom: 2rem;
+
+  h1 {
+    margin-bottom: 0.5rem;
+  }
+
+  h2 {
+    margin-bottom: 1.5rem;
+    color: #555;
+  }
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.button {
+  padding: 0.5rem 1rem;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #333;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #e0e0e0;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.chatContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.message {
+  display: flex;
+  max-width: 70%;
+
+  &.left {
+    align-self: flex-start;
+
+    .messageContent {
+      background-color: #f1f1f1;
+      border-radius: 12px 12px 12px 0;
+    }
+  }
+
+  &.right {
+    align-self: flex-end;
+
+    .messageContent {
+      background-color: #e1f5fe;
+      border-radius: 12px 12px 0 12px;
+    }
+  }
+
+  &.loading {
+    opacity: 0.7;
+
+    .messageContent {
+      background-color: #f5f5f5;
+      border: 1px dashed #ccc;
+    }
+  }
+}
+
+.messageContent {
+  padding: 1rem;
+  max-width: 40rem;
+  color: #333;
+}
+
+.messageSender {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.messageText {
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.debateFinished {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 1rem;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-weight: bold;
+  color: #555;
+}

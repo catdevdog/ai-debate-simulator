@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 export default function Home() {
   const router = useRouter();
   const storeSetting = useDebateStore((s) => s.setInitialSetting);
+  const reset = useDebateStore((s) => s.settingReset);
   const usableModels = useDebateStore((s) => s.usableModels);
   const defaultUseModels = useDebateStore((s) => s.useModels);
 
@@ -23,6 +24,7 @@ export default function Home() {
 
   // 초기 useModels 설정 (default)
   useEffect(() => {
+    reset();
     setSettingForm((prev) => ({
       ...prev,
       useModels: defaultUseModels,
@@ -104,10 +106,13 @@ export default function Home() {
           </div>
 
           <div>
-            <span>각 모델 답변 제한 : </span>
+            <span>각 모델 답변 횟수 제한 :</span>
             <input
               type="number"
               value={settingForm.debateSetting.answerLimit}
+              placeholder="2 ~ 5"
+              min={2}
+              max={5}
               onChange={(e) =>
                 setSettingForm({
                   ...settingForm,
