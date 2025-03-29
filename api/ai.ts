@@ -1,25 +1,16 @@
-type TypeResult = {
-  result_gpt: string;
-  result_claude: string;
-};
+export type TypeModel = "gpt" | "claude";
 
-export async function AI(prompt: string): Promise<TypeResult> {
-  const [gptRes, claudeRes] = await Promise.all([
-    fetch("/api/gpt", {
+export async function AI(model: TypeModel, prompt: string): Promise<string> {
+  try {
+    const response = await fetch(`/api/${model}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ prompt }),
-    }).then((res) => res.json()),
+    }).then((res) => res.json());
 
-    fetch("/api/claude", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
-    }).then((res) => res.json()),
-  ]);
-
-  return {
-    result_gpt: gptRes.result ?? "[GPT 응답 없음]",
-    result_claude: claudeRes.result ?? "[Claude 응답 없음]",
-  };
+    return response.result ?? `[${model} 응답 없음]`;
+  } catch (error) {
+    console.error(`Error calling ${model} API:`, error);
+    return `[${model} 오류 발생]`;
+  }
 }

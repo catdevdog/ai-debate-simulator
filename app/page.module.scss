@@ -20,5 +20,20 @@
 .button {
   width: 100%;
   padding: 0.2rem;
-  font-size: 110%;
+  font-size: 1rem;
+}
+.setting {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 0.5rem;
+  gap: 1rem;
+}
+
+.model_select {
+  input {
+    margin-right: 0.5rem;
+  }
+  label {
+    margin-right: 0.5rem;
+  }
 }
