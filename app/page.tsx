@@ -100,8 +100,11 @@ export default function Home() {
                 })
               }
             >
-              <option value="gpt-4o">GPT-4o</option>
-              <option value="claude-3.7 Sonnet">Claude 3.7 Sonnet</option>
+              {settingForm.useModels.map((model) => (
+                <option key={model.name} value={model.name}>
+                  {model.name}
+                </option>
+              ))}
             </select>
           </div>
 

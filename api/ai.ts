@@ -1,6 +1,4 @@
-export type TypeModel = "gpt" | "claude";
-
-export async function AI(model: TypeModel, prompt: string): Promise<string> {
+export async function AI(model: string, prompt: string): Promise<string> {
   try {
     const response = await fetch(`/api/${model}`, {
       method: "POST",

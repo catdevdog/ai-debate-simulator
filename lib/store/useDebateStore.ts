@@ -72,7 +72,11 @@ interface TypeDebateState {
 export const useDebateStore = create<TypeDebateState>((set) => ({
   maxTokensPerModel: 1000, // 각 모델 최대 토큰 수
   maxTextLength: 100, // 각 모델 최대 텍스트 길이
-  usableModels: ["gpt-4o", "claude-3.5 haiku"], // 사용 가능한 모델
+  usableModels: [
+    "gpt-4o",
+    "claude-3-5-haiku-latest",
+    "claude-3-7-sonnet-latest",
+  ], // 사용 가능한 모델
 
   subject: "",
   prompt: "",
@@ -82,7 +86,7 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
   },
   useModels: [
     { name: "gpt-4o", side: "Affirmative" },
-    { name: "claude-3.5 haiku", side: "Negative" },
+    { name: "claude-3-5-haiku-latest", side: "Negative" },
   ], // 사용 모델 선택
   isLoading: false,
   debateRecord: [],
@@ -129,7 +133,7 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
       },
       useModels: [
         { name: "gpt-4o", side: "Affirmative" },
-        { name: "claude-3.5 haiku", side: "Negative" },
+        { name: "claude-3-5-haiku-latest", side: "Negative" },
       ],
       debateRecord: [],
       currentModel: "",
@@ -139,6 +143,10 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
       isLoading: false,
       isDebateFinished: false,
       // 초기화 시 사용 가능한 모델로 설정
-      usableModels: ["gpt-4o", "claude-3.5 haiku"],
+      usableModels: [
+        "gpt-4o",
+        "claude-3-5-haiku-latest",
+        "claude-3-7-sonnet-latest",
+      ], // 사용 가능한 모델,
     })),
 }));

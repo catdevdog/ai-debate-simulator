@@ -1,6 +1,6 @@
 "use client";
 
-import { AI, TypeModel } from "@/api/ai";
+import { AI } from "@/api/ai";
 import { useDebateStore } from "@/lib/store/useDebateStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -109,8 +109,8 @@ export default function Process() {
       setIsLoading(true);
 
       // AI 응답 가져오기
-      const modelKey = getModelKey(currentModel);
-      const response = await AI(modelKey, newPrompt);
+      // const modelKey = getModelKey(currentModel);
+      const response = await AI(currentModel, newPrompt);
 
       // 대화 기록 추가
       addDebateRecord({
@@ -156,11 +156,11 @@ export default function Process() {
   };
 
   // 모델 키 가져오기
-  const getModelKey = (fullName: string): TypeModel => {
-    if (fullName.toLowerCase().includes("gpt")) return "gpt";
-    if (fullName.toLowerCase().includes("claude")) return "claude";
-    throw new Error("지원되지 않는 모델입니다.");
-  };
+  // const getModelKey = (fullName: string): TypeModel => {
+  //   if (fullName.toLowerCase().includes("gpt")) return "gpt";
+  //   if (fullName.toLowerCase().includes("claude")) return "claude";
+  //   throw new Error("지원되지 않는 모델입니다.");
+  // };
 
   // 자동 토론 제어 함수들
   const startAutoDebate = () => {
@@ -228,7 +228,8 @@ export default function Process() {
             >
               <div className={styles.messageContent}>
                 <div className={styles.messageSender}>
-                  {record.model} ({record.side})
+                  {record.model} (
+                  {record.side === "Affirmative" ? "동의" : "반대"})
                 </div>
                 <div className={styles.messageText}>{record.content}</div>
               </div>
