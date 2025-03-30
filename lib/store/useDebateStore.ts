@@ -70,8 +70,10 @@ interface TypeDebateState {
 }
 
 export const useDebateStore = create<TypeDebateState>((set) => ({
+  // api단에 어떻게 전달?
   maxTokensPerModel: 1000, // 각 모델 최대 토큰 수
   maxTextLength: 100, // 각 모델 최대 텍스트 길이
+
   usableModels: [
     "gpt-4o",
     "claude-3-5-haiku-latest",
@@ -131,10 +133,7 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
         startModel: "",
         answerLimit: 3,
       },
-      useModels: [
-        { name: "gpt-4o", side: "Affirmative" },
-        { name: "claude-3-5-haiku-latest", side: "Negative" },
-      ],
+      useModels: state.useModels,
       debateRecord: [],
       currentModel: "",
       nextModel: "",
@@ -142,11 +141,6 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
       result: "",
       isLoading: false,
       isDebateFinished: false,
-      // 초기화 시 사용 가능한 모델로 설정
-      usableModels: [
-        "gpt-4o",
-        "claude-3-5-haiku-latest",
-        "claude-3-7-sonnet-latest",
-      ], // 사용 가능한 모델,
+      usableModels: state.usableModels,
     })),
 }));

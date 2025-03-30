@@ -26,8 +26,7 @@ export async function POST(req: NextRequest) {
           - 찬/반 구분이 가능한 주제는 무조건 진행
           - 찬/반 구분 불가 주제는 '주제 변경' 요청 가능
           - 상대방의 논리를 반박하기 위한 질문 가능
-          - 읽기 편한 자유 양식으로 작성
-        제약: 
+          - 읽기 편한 자유 양식으로 작성, 적절한 줄바꿈
           - 답변 ${maxTextLength}자 이내 작성
           - 역할 절대 변경 불가`,
       messages: [{ role: "user", content: prompt }],
