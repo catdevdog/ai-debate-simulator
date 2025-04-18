@@ -27,13 +27,14 @@ export default function MarkdownRenderer({
 
           // 인라인 코드 스타일링
           code: (props) => {
-            const { className, children, ...rest } = props;
+            const { className, children, inline, ...rest } = props as {
+              className?: string;
+              children: React.ReactNode;
+              inline?: boolean;
+              [key: string]: unknown;
+            };
 
-            // inline 속성 확인 - @ts-ignore로 타입 오류 회피
-            // @ts-ignore
-            const isInline = props.inline;
-
-            if (isInline) {
+            if (inline) {
               return (
                 <code className={styles.inlineCode} {...rest}>
                   {children}
