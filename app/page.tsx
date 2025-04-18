@@ -205,13 +205,13 @@ export default function Home() {
                 결론 도출 모드 설정하기
               </Link>
               <p className={styles.exampleText}>
-                예: &quot;현 트럼프 정책에 가장 안전한 ETF는 무엇인가?&quot;
+                예: &quot; Open AI VS Anthropic Claude &quot;
               </p>
             </div>
             <div className={styles.benefits}>
               <div className={styles.benefit}>
                 <strong>다양한 관점</strong>
-                <span>각 AI 모델이 다른 전문가 역할을 수행합니다.</span>
+                <span>각 AI 모델이 전문가 역할을 수행합니다.</span>
               </div>
               <div className={styles.benefit}>
                 <strong>종합 결론</strong>
