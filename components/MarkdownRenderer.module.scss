@@ -1,0 +1,101 @@
+// components/MarkdownRenderer.module.scss
+.markdown {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: inherit;
+
+  p {
+    margin-bottom: 1rem;
+  }
+
+  .heading1,
+  .heading2,
+  .heading3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .heading1 {
+    font-size: 1.5rem;
+  }
+
+  .heading2 {
+    font-size: 1.25rem;
+  }
+
+  .heading3 {
+    font-size: 1.125rem;
+  }
+
+  .list,
+  .orderedList {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+  }
+
+  .listItem {
+    margin-bottom: 0.25rem;
+  }
+
+  .bold {
+    font-weight: 600;
+  }
+
+  .italic {
+    font-style: italic;
+  }
+
+  .link {
+    color: #0070f3;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .inlineCode {
+    padding: 0.2em 0.4em;
+    font-family: monospace;
+    font-size: 0.9em;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+  }
+
+  .codeBlock {
+    display: block;
+    overflow-x: auto;
+    padding: 1rem;
+    font-family: monospace;
+    font-size: 0.9em;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 5px;
+    margin: 1rem 0;
+  }
+
+  .blockquote {
+    border-left: 4px solid #e0e0e0;
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-right: 0;
+    font-style: italic;
+  }
+
+  // 다크 모드 지원
+  @media (prefers-color-scheme: dark) {
+    .inlineCode,
+    .codeBlock {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .blockquote {
+      border-left-color: #333;
+    }
+
+    .link {
+      color: #3291ff;
+    }
+  }
+}

@@ -3,8 +3,9 @@
 import { AI } from "@/api/ai";
 import { useDebateStore } from "@/lib/store/useDebateStore";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./page.module.scss";
+import MarkdownRenderer from "../../components/MarkdownRenderer";
 
 export default function Process() {
   // 스토어에서 상태 가져오기
@@ -29,13 +30,16 @@ export default function Process() {
   // 토론 자동 진행 상태 관리
   const autoProgressRef = useRef(false);
   const router = useRouter();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRY = 2;
 
   useEffect(() => {
     if (subject === "") {
       alert("주제를 설정해주세요.");
       router.push("/");
     }
-  }, []);
+  }, [router, subject]);
 
   // 초기화 이펙트
   useEffect(() => {
@@ -60,7 +64,23 @@ export default function Process() {
     } else {
       finishDebate();
     }
-  }, [isLoading, debateRecord.length, isDebateFinished]);
+  }, [
+    isLoading,
+    debateRecord.length,
+    isDebateFinished,
+    useModels.length,
+    debateSetting.answerLimit,
+  ]);
+
+  // 에러 메시지 표시 타이머
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => {
+        setErrorMessage(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   // 토론 종료 처리
   const finishDebate = () => {
@@ -83,14 +103,15 @@ export default function Process() {
     if (debateRecord.length > 0) {
       const conversationHistory = debateRecord
         .map((record) => `${record.model} (${record.side}): ${record.content}`)
-        .join("\n");
+        .join("\n\n");
 
       result += `\n\n${conversationHistory}`;
     }
 
     // 지시사항 추가
     result += `\n\n당신은 ${currentModel}입니다. 
-      위 대화를 바탕으로 ${currentModelSide}의 입장에서, 상대의 주장을 반박하거나 자신의 주장을 강화하는 답변을 작성하세요.`;
+      위 대화를 바탕으로 ${currentModelSide}의 입장에서, 상대의 주장을 반박하거나 자신의 주장을 강화하는 답변을 작성하세요.
+      필요에 따라 마크다운 문법을 활용하여 응답을 구조화해도 좋습니다.`;
 
     return result;
   };
@@ -107,10 +128,15 @@ export default function Process() {
 
     try {
       setIsLoading(true);
+      setRetryCount(0); // 재시도 카운트 초기화
 
-      // AI 응답 가져오기
-      // const modelKey = getModelKey(currentModel);
-      const response = await AI(currentModel, newPrompt);
+      // AI 응답 가져오기 - 모드 명시적으로 전달
+      const response = await AI(currentModel, newPrompt, "Debate");
+
+      // 오류 응답 확인
+      if (response.startsWith("[") && response.includes("오류")) {
+        throw new Error(response);
+      }
 
       // 대화 기록 추가
       addDebateRecord({
@@ -125,7 +151,7 @@ export default function Process() {
       // 토론 종료 확인
       checkDebateCompletion();
     } catch (err) {
-      handleError(err);
+      await handleError(err);
     } finally {
       setIsLoading(false);
     }
@@ -149,18 +175,29 @@ export default function Process() {
   };
 
   // 오류 처리
-  const handleError = (err: unknown) => {
-    setError("AI 응답 실패");
-    console.error(err);
-    autoProgressRef.current = false; // 오류 발생 시 자동 진행 중지
-  };
+  const handleError = async (err: unknown) => {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error("AI 응답 오류:", errorMsg);
 
-  // 모델 키 가져오기
-  // const getModelKey = (fullName: string): TypeModel => {
-  //   if (fullName.toLowerCase().includes("gpt")) return "gpt";
-  //   if (fullName.toLowerCase().includes("claude")) return "claude";
-  //   throw new Error("지원되지 않는 모델입니다.");
-  // };
+    // 전역 오류 상태 설정
+    setError(errorMsg);
+    setErrorMessage(errorMsg);
+
+    // 자동 재시도 로직 (최대 2번)
+    if (retryCount < MAX_RETRY && autoProgressRef.current) {
+      setRetryCount((prevCount) => prevCount + 1);
+      setErrorMessage(`응답 오류, ${MAX_RETRY - retryCount}회 재시도 중...`);
+
+      // 1.5초 후 재시도
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return handleAIResponse();
+    }
+
+    // 최대 재시도 횟수 초과 시 자동 진행 중지
+    if (retryCount >= MAX_RETRY) {
+      autoProgressRef.current = false;
+    }
+  };
 
   // 자동 토론 제어 함수들
   const startAutoDebate = () => {
@@ -177,6 +214,13 @@ export default function Process() {
   // 첫 번째 모델 확인 (메시지 정렬용)
   const getFirstModelName = () => {
     return useModels.length > 0 ? useModels[0].name : "";
+  };
+
+  // 수동 재시도 함수
+  const retryResponse = () => {
+    if (!isLoading) {
+      handleAIResponse();
+    }
   };
 
   // 렌더링
@@ -211,7 +255,23 @@ export default function Process() {
             >
               자동 진행 중지
             </button>
+            <button
+              onClick={() => router.push("/")}
+              className={styles.buttonSecondary}
+            >
+              처음으로
+            </button>
           </div>
+
+          {/* 에러 메시지 표시 */}
+          {errorMessage && (
+            <div className={styles.errorMessage}>
+              <span>{errorMessage}</span>
+              <button onClick={retryResponse} disabled={isLoading}>
+                재시도
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 채팅 컨테이너 */}
@@ -231,7 +291,9 @@ export default function Process() {
                   {record.model} (
                   {record.side === "Affirmative" ? "동의" : "반대"})
                 </div>
-                <div className={styles.messageText}>{record.content}</div>
+                <div className={styles.messageText}>
+                  <MarkdownRenderer>{record.content}</MarkdownRenderer>
+                </div>
               </div>
             </div>
           ))}
@@ -250,7 +312,11 @@ export default function Process() {
                   {currentModel} 생각 중...
                 </div>
                 <div className={styles.messageText}>
-                  응답을 생성 중입니다...
+                  <div className={styles.loadingAnimation}>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -258,7 +324,15 @@ export default function Process() {
 
           {/* 토론 종료 메시지 */}
           {isDebateFinished && (
-            <div className={styles.debateFinished}>토론이 종료되었습니다</div>
+            <div className={styles.debateFinished}>
+              토론이 종료되었습니다
+              <button
+                onClick={() => router.push("/summary")}
+                className={styles.summaryButton}
+              >
+                토론 요약 보기
+              </button>
+            </div>
           )}
         </div>
       </div>
