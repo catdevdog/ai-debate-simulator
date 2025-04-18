@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import styles from "./page.module.scss";
 import MarkdownRenderer from "../../components/MarkdownRenderer";
+import TypingEffect from "../../components/TypingEffect";
 
 export default function Process() {
   // 스토어에서 상태 가져오기
@@ -33,6 +34,10 @@ export default function Process() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRY = 2;
+
+  // 타이핑 효과 상태
+  const [showTypingEffect, setShowTypingEffect] = useState(true);
+  const [typingSpeed, setTypingSpeed] = useState(20); // 타이핑 속도 (밀리초)
 
   useEffect(() => {
     if (subject === "") {
@@ -223,13 +228,33 @@ export default function Process() {
     }
   };
 
+  // 타이핑 효과 토글
+  const toggleTypingEffect = () => {
+    setShowTypingEffect(!showTypingEffect);
+  };
+
+  // 타이핑 속도 조절
+  const changeTypingSpeed = (speed: "slow" | "medium" | "fast") => {
+    switch (speed) {
+      case "slow":
+        setTypingSpeed(40);
+        break;
+      case "medium":
+        setTypingSpeed(20);
+        break;
+      case "fast":
+        setTypingSpeed(5);
+        break;
+    }
+  };
+
   // 렌더링
   return (
     <div className={styles.container}>
       <div className={styles.debateContainer}>
         {/* 헤더 섹션 */}
         <div className={styles.debateHeader}>
-          <h1>토론 진행</h1>
+          <h1>AI 토론 시뮬레이터</h1>
           <h2>주제: {subject}</h2>
           <div className={styles.controls}>
             <button
@@ -255,6 +280,9 @@ export default function Process() {
             >
               자동 진행 중지
             </button>
+            <button onClick={toggleTypingEffect} className={styles.button}>
+              {showTypingEffect ? "타이핑 효과 끄기" : "타이핑 효과 켜기"}
+            </button>
             <button
               onClick={() => router.push("/")}
               className={styles.buttonSecondary}
@@ -262,6 +290,36 @@ export default function Process() {
               처음으로
             </button>
           </div>
+
+          {showTypingEffect && (
+            <div className={styles.speedControls}>
+              <span>타이핑 속도:</span>
+              <button
+                onClick={() => changeTypingSpeed("slow")}
+                className={`${styles.speedButton} ${
+                  typingSpeed === 40 ? styles.activeSpeed : ""
+                }`}
+              >
+                느리게
+              </button>
+              <button
+                onClick={() => changeTypingSpeed("medium")}
+                className={`${styles.speedButton} ${
+                  typingSpeed === 20 ? styles.activeSpeed : ""
+                }`}
+              >
+                보통
+              </button>
+              <button
+                onClick={() => changeTypingSpeed("fast")}
+                className={`${styles.speedButton} ${
+                  typingSpeed === 5 ? styles.activeSpeed : ""
+                }`}
+              >
+                빠르게
+              </button>
+            </div>
+          )}
 
           {/* 에러 메시지 표시 */}
           {errorMessage && (
@@ -292,7 +350,15 @@ export default function Process() {
                   {record.side === "Affirmative" ? "동의" : "반대"})
                 </div>
                 <div className={styles.messageText}>
-                  <MarkdownRenderer>{record.content}</MarkdownRenderer>
+                  {showTypingEffect && index === debateRecord.length - 1 ? (
+                    <TypingEffect
+                      text={record.content}
+                      speed={typingSpeed}
+                      delay={300}
+                    />
+                  ) : (
+                    <MarkdownRenderer>{record.content}</MarkdownRenderer>
+                  )}
                 </div>
               </div>
             </div>
