@@ -10,15 +10,14 @@ import MarkdownRenderer from "@/components/MarkdownRenderer";
 // 전문가 역할에 따른 시스템 프롬프트 정의
 const expertisePrompts: Record<string, string> = {
   analyst:
-    "당신은 데이터 분석가입니다. 객관적인 데이터와 통계를 기반으로 분석하고 핵심 인사이트를 제시하세요.",
+    "당신은 데이터 분석가입니다. 데이터와 통계를 기반으로 간결하게 의견을 제시하세요.",
   economist:
-    "당신은 경제 전문가입니다. 경제 이론과 시장 역학 관점에서 핵심 인사이트를 제시하세요.",
+    "당신은 경제 전문가입니다. 경제 이론과 시장 역학 관점에서 간결하게 의견을 제시하세요.",
   strategist:
-    "당신은 전략가입니다. 장기적인 관점에서 전략적 함의와 핵심 인사이트를 제시하세요.",
+    "당신은 전략가입니다. 장기적 관점에서 간결하게 의견을 제시하세요.",
   historian:
-    "당신은 역사 전문가입니다. 역사적 패턴과 과거 사례를 기반으로 핵심 인사이트를 제시하세요.",
-  critic:
-    "당신은 비평가입니다. 비판적 관점에서 핵심 인사이트와 대안을 제시하세요.",
+    "당신은 역사 전문가입니다. 역사적 패턴과 과거 사례를 기반으로 간결하게 의견을 제시하세요.",
+  critic: "당신은 비평가입니다. 비판적 관점에서 간결하게 의견을 제시하세요.",
 };
 
 // 역할 ID에 따른 한글 이름
@@ -51,13 +50,16 @@ export default function ConclusionProcess() {
 
   // 로컬 상태
   const [currentStep, setCurrentStep] = useState<number>(0);
+  const [conversationStage, setConversationStage] = useState<number>(0);
   const [isGeneratingFinalConclusion, setIsGeneratingFinalConclusion] =
     useState<boolean>(false);
   const [modelRoles, setModelRoles] = useState<Record<string, string>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [discussionTopic, setDiscussionTopic] = useState<string>("");
   const autoProgressRef = useRef(false);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRY = 2;
+  const MAX_CONVERSATION_STAGES = 3; // 대화 단계 제한
 
   // 카드 뷰/리스트 뷰 전환
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
@@ -83,6 +85,9 @@ export default function ConclusionProcess() {
     if (conclusionSetting.models.length > 0) {
       setCurrentModel(conclusionSetting.models[0]);
     }
+
+    // 초기 토론 주제는 사용자가 입력한 주제
+    setDiscussionTopic(subject);
   }, [subject, router, conclusionSetting.models, setCurrentModel]);
 
   // 에러 메시지 표시 타이머
@@ -99,96 +104,112 @@ export default function ConclusionProcess() {
   useEffect(() => {
     if (!autoProgressRef.current || isLoading || isConclusionFinished) return;
 
-    const allModelsDone = currentStep >= conclusionSetting.models.length;
-
-    if (allModelsDone) {
+    // 대화 단계가 최대치에 도달한 경우 최종 결론으로 진행
+    if (conversationStage >= MAX_CONVERSATION_STAGES) {
       if (!finalConclusion && !isGeneratingFinalConclusion) {
         generateFinalConclusion();
       }
+      return;
+    }
+
+    // 모든 모델이 현재 대화 단계에서 발언한 경우 다음 단계로
+    const modelsInCurrentStage = conclusionRecord.filter(
+      (record) => record.stage === conversationStage
+    );
+
+    if (modelsInCurrentStage.length >= conclusionSetting.models.length) {
+      // 다음 대화 단계로 이동
+      setConversationStage((prev) => prev + 1);
+      setCurrentStep(0);
+      if (conclusionSetting.models.length > 0) {
+        setCurrentModel(conclusionSetting.models[0]);
+      }
     } else {
+      // 현재 단계에서 다음 모델의 응답 요청
       const timer = setTimeout(handleAIResponse, 1000);
       return () => clearTimeout(timer);
     }
   }, [
     isLoading,
     currentStep,
+    conversationStage,
     isConclusionFinished,
     conclusionSetting.models.length,
     finalConclusion,
     isGeneratingFinalConclusion,
+    conclusionRecord,
   ]);
 
-  // 프롬프트 생성
-  const createPrompt = (isFinalConclusion = false) => {
-    if (isFinalConclusion) {
-      // 최종 결론 도출을 위한 프롬프트
-      let prompt = `주제: ${subject}\n\n`;
+  // 뷰 모드 전환 함수
+  const toggleViewMode = () => {
+    setViewMode((prev) => (prev === "card" ? "list" : "card"));
+  };
 
-      // 다른 모델들의 분석 내용 추가
-      prompt += "각 전문가의 분석:\n\n";
+  // 대화 단계별 프롬프트 생성
+  const createConversationPrompt = (stage: number) => {
+    const model = currentModel;
+    const role = modelRoles[model] || "analyst";
+    const expertise = expertisePrompts[role] || "";
 
-      conclusionRecord.forEach((record) => {
-        prompt += `${record.model} (${record.role}의 관점):\n`;
-        prompt += `${record.content}\n\n`;
-      });
+    // 이전 대화 내용 수집
+    const previousMessages = conclusionRecord
+      .map((record) => `${record.model} (${record.role}): ${record.content}`)
+      .join("\n\n");
 
-      prompt += `당신은 ${conclusionSetting.finalModel} 모델입니다. 위의 다양한 전문가 관점을 종합하여 주제에 대한 최종 결론을 도출해주세요. `;
-
-      if (conclusionSetting.requireEvidence) {
-        prompt += "결론에는 반드시 객관적인 근거를 포함해주세요. ";
-      }
-
-      prompt += "간결하면서도 명확한 결론을 제시하는 것이 중요합니다. ";
-      prompt += "\n\n다음 형식으로 구조화된 결론을 제시해주세요:\n";
-      prompt += "1. 요약: 주요 발견과 결론을 간략히 요약 (3-4문장)\n";
-      prompt +=
-        "2. 핵심 인사이트: 각 전문가의 주요 주장 중 가장 중요한 점들 (3-4개 항목)\n";
-      prompt +=
-        "3. 최종 결론: 가장 적절한 답변과 그 이유 (명확하고 간결하게)\n";
-      prompt +=
-        "4. 권장 사항: 구체적인 실행 방안이나 조언 (선택적, 필요한 경우)\n";
-
-      return prompt;
+    // 각 단계별 지시사항
+    let stageInstruction = "";
+    if (stage === 0) {
+      // 첫 단계: 주제에 대한 초기 의견
+      stageInstruction = `주제에 대한 초기 의견을 3문장 이내로 제시하세요. 다른 전문가들이 논의할 수 있는 핵심적인 관점을 짧게 제시하는 것이 중요합니다.`;
+      // 주제 포함
+      stageInstruction = `${stageInstruction}\n\n현재 논의 주제: ${discussionTopic}`;
+    } else if (stage === MAX_CONVERSATION_STAGES - 1) {
+      // 마지막 단계: 합의점 찾기
+      stageInstruction = `지금까지의 논의를 바탕으로 가장 합리적인 결론 방향을 3문장 이내로 제안하세요. 다른 전문가들의 의견 중 동의하는 부분을 언급하고 최종 결론을 위한 방향을 제시하세요.`;
     } else {
-      // 각 모델의 전문가 분석을 위한 프롬프트
-      const model = currentModel;
-      const role = modelRoles[model] || "analyst";
-      const expertise = expertisePrompts[role] || "";
-
-      let prompt = `주제: ${subject}\n\n`;
-      prompt += `${expertise}\n\n`;
-
-      // 간결한 분석 요구
-      prompt +=
-        "분석은 간결하게 핵심만 작성해주세요. 불필요한 서론이나 장황한 설명은 피하고, 키 포인트를 중심으로 작성해주세요.\n\n";
-
-      if (conclusionSetting.requireEvidence) {
-        prompt +=
-          "분석 시 객관적인 근거와 데이터를 포함해야 합니다. 가능한 경우 출처를 명시해주세요.\n\n";
-      }
-
-      // 이미 분석한 내용이 있으면 추가
-      if (conclusionRecord.length > 0) {
-        prompt += "이전 전문가 분석:\n\n";
-
-        conclusionRecord.forEach((record) => {
-          prompt += `${record.model} (${record.role}의 관점):\n`;
-          prompt += `${record.content}\n\n`;
-        });
-      }
-
-      prompt += `당신은 ${model} 모델로, ${
-        roleNames[role] || role
-      }의 관점에서 주제에 대한 분석을 제공해주세요. `;
-      prompt +=
-        "다른 전문가의 의견을 단순히 반복하지 말고, 자신만의 고유한 관점과 통찰을 제시하세요. ";
-      prompt += "마크다운 형식으로 다음과 같이 작성해주세요:\n";
-      prompt += "1. 핵심 인사이트 (2-3개 항목)\n";
-      prompt += "2. 관련 데이터/근거 (간결하게)\n";
-      prompt += "3. 결론적 견해 (1-2문장)\n";
-
-      return prompt;
+      // 중간 단계: 다른 의견에 반응
+      stageInstruction = `이전 의견들에 대한 당신의 반응을 3문장 이내로 제시하세요. 동의하는 부분과 추가하고 싶은 관점을 간결하게 언급하세요.`;
     }
+
+    // 최종 프롬프트 구성
+    let prompt = `주제: ${subject}\n\n`;
+    prompt += `${expertise}\n\n`;
+
+    if (previousMessages) {
+      prompt += `이전 대화 내용:\n\n${previousMessages}\n\n`;
+    }
+
+    prompt += `당신은 ${model} 모델로, ${
+      roleNames[role] || role
+    }의 관점에서 대화에 참여하고 있습니다.\n\n`;
+    prompt += stageInstruction;
+    prompt += `\n\n반드시 3문장 이내의 간결한 답변으로 작성하세요. 장황한 설명이나 불필요한 인사말은 생략하고 핵심만 말하세요.`;
+
+    return prompt;
+  };
+
+  // 최종 결론 프롬프트 생성
+  const createFinalConclusionPrompt = () => {
+    // 토론 내용 정리
+    const discussionContent = conclusionRecord
+      .map((record) => `${record.model} (${record.role}): ${record.content}`)
+      .join("\n\n");
+
+    let prompt = `주제: ${subject}\n\n`;
+    prompt += `지금까지의 전문가 토론 내용:\n\n${discussionContent}\n\n`;
+    prompt += `당신은 ${conclusionSetting.finalModel} 모델입니다. 위의 다양한 전문가들이 나눈 대화를 바탕으로 최종 결론을 도출해주세요.\n\n`;
+    prompt += `결론에는 다음 사항을 명확히 포함해주세요:\n`;
+    prompt += `1. 토론에서 나온 주요 관점들의 간략한 요약\n`;
+    prompt += `2. 가장 설득력 있는 주장과 그 이유\n`;
+    prompt += `3. 최종 결론 - 명확하게 "결론적으로, ~이다"라는 형식으로 제시\n`;
+
+    if (conclusionSetting.requireEvidence) {
+      prompt += `4. 이 결론을 지지하는 핵심 근거\n`;
+    }
+
+    prompt += `\n결론은 객관적이고 명확해야 하며, 가장 타당한 하나의 결론을 도출해주세요. 여러 가능성을 나열하는 방식은 피해주세요.`;
+
+    return prompt;
   };
 
   // AI 응답 처리
@@ -201,7 +222,7 @@ export default function ConclusionProcess() {
       setRetryCount(0); // 재시도 카운트 초기화
 
       // 프롬프트 생성
-      const prompt = createPrompt(false);
+      const prompt = createConversationPrompt(conversationStage);
 
       // AI 응답 가져오기 - 모드와 역할 전달
       const response = await AI(model, prompt, "Conclusion", role);
@@ -211,27 +232,34 @@ export default function ConclusionProcess() {
         throw new Error(response);
       }
 
-      // 응답 기록 추가
+      // 응답 기록 추가 (단계 정보 포함)
       addConclusionRecord({
         model,
         role: roleNames[role] || role,
         perspective: role,
         content: response,
+        stage: conversationStage, // 대화 단계 정보 추가
       });
 
       // 다음 단계로 진행
       setCurrentStep((prev) => prev + 1);
 
       // 다음 모델로 전환
-      if (currentStep + 1 < conclusionSetting.models.length) {
-        setCurrentModel(conclusionSetting.models[currentStep + 1]);
-      }
+      const nextModelIndex =
+        (currentStep + 1) % conclusionSetting.models.length;
+      setCurrentModel(conclusionSetting.models[nextModelIndex]);
 
-      // 모든 모델이 응답했는지 확인
+      // 모든 모델이 현재 단계에서 응답했는지 확인
       if (currentStep + 1 >= conclusionSetting.models.length) {
-        // 자동 진행 중이면 최종 결론 생성
-        if (autoProgressRef.current) {
-          generateFinalConclusion();
+        // 다음 대화 단계로 이동
+        setConversationStage((prev) => prev + 1);
+        setCurrentStep(0);
+
+        // 대화 단계가 최대치에 도달한 경우
+        if (conversationStage + 1 >= MAX_CONVERSATION_STAGES) {
+          if (autoProgressRef.current) {
+            generateFinalConclusion();
+          }
         }
       }
     } catch (err) {
@@ -251,7 +279,7 @@ export default function ConclusionProcess() {
       const finalModel = conclusionSetting.finalModel;
 
       // 최종 결론 프롬프트 생성
-      const prompt = createPrompt(true);
+      const prompt = createFinalConclusionPrompt();
 
       // AI 응답 가져오기 - 결론 모드로 전달하고 역할은 빈 문자열(최종 결론용)
       const response = await AI(finalModel, prompt, "Conclusion", "");
@@ -310,8 +338,8 @@ export default function ConclusionProcess() {
     if (!isConclusionFinished && !isLoading) {
       autoProgressRef.current = true;
 
-      // 현재 단계에 따라 다음 작업 결정
-      if (currentStep >= conclusionSetting.models.length) {
+      // 대화 단계가 최대치에 도달한 경우 최종 결론으로 진행
+      if (conversationStage >= MAX_CONVERSATION_STAGES) {
         if (!finalConclusion) {
           generateFinalConclusion();
         }
@@ -325,10 +353,10 @@ export default function ConclusionProcess() {
     autoProgressRef.current = false;
   };
 
-  // 수동 재시도 함수
-  const retryResponse = () => {
+  // 수동 진행 함수
+  const continueConversation = () => {
     if (!isLoading) {
-      if (isGeneratingFinalConclusion) {
+      if (conversationStage >= MAX_CONVERSATION_STAGES) {
         generateFinalConclusion();
       } else {
         handleAIResponse();
@@ -336,9 +364,12 @@ export default function ConclusionProcess() {
     }
   };
 
-  // 뷰 모드 전환
-  const toggleViewMode = () => {
-    setViewMode((prev) => (prev === "card" ? "list" : "card"));
+  // 진행 상태 표시 문구
+  const getStageDescription = () => {
+    if (conversationStage === 0) return "초기 의견 제시";
+    if (conversationStage === MAX_CONVERSATION_STAGES - 1) return "합의점 찾기";
+    if (conversationStage >= MAX_CONVERSATION_STAGES) return "최종 결론 도출";
+    return `논의 단계 ${conversationStage}`;
   };
 
   // 렌더링
@@ -352,66 +383,45 @@ export default function ConclusionProcess() {
 
           <div className={styles.progressIndicator}>
             <div className={styles.progressSteps}>
-              {conclusionSetting.models.map((model, index) => (
-                <div
-                  key={model}
-                  className={`${styles.progressStep} ${
-                    index < currentStep
-                      ? styles.completed
-                      : index === currentStep && isLoading
-                      ? styles.current
-                      : index === currentStep
-                      ? styles.active
-                      : ""
-                  }`}
-                >
-                  <span>{model}</span>
-                </div>
-              ))}
-              <div
-                className={`${styles.progressStep} ${
-                  isGeneratingFinalConclusion
-                    ? styles.current
-                    : finalConclusion
-                    ? styles.completed
-                    : currentStep >= conclusionSetting.models.length
-                    ? styles.active
-                    : ""
-                }`}
-              >
-                <span>최종 결론</span>
+              <div className={styles.stageLabel}>
+                현재 단계: {getStageDescription()}
               </div>
+              {Array.from({ length: MAX_CONVERSATION_STAGES + 1 }).map(
+                (_, index) => (
+                  <div
+                    key={index}
+                    className={`${styles.progressStep} ${
+                      index < conversationStage
+                        ? styles.completed
+                        : index === conversationStage && isLoading
+                        ? styles.current
+                        : index === conversationStage
+                        ? styles.active
+                        : ""
+                    }`}
+                  >
+                    <span>
+                      {index < MAX_CONVERSATION_STAGES
+                        ? `단계 ${index + 1}`
+                        : "결론"}
+                    </span>
+                  </div>
+                )
+              )}
             </div>
           </div>
 
           <div className={styles.controls}>
             <button
-              onClick={handleAIResponse}
-              disabled={
-                isLoading ||
-                isConclusionFinished ||
-                currentStep >= conclusionSetting.models.length
-              }
+              onClick={continueConversation}
+              disabled={isLoading || isConclusionFinished}
               className={styles.button}
             >
               {isLoading && !isGeneratingFinalConclusion
                 ? "AI 응답 중..."
-                : "다음 모델 분석"}
-            </button>
-
-            <button
-              onClick={generateFinalConclusion}
-              disabled={
-                isLoading ||
-                isConclusionFinished ||
-                currentStep < conclusionSetting.models.length ||
-                isGeneratingFinalConclusion
-              }
-              className={styles.button}
-            >
-              {isGeneratingFinalConclusion
-                ? "결론 생성 중..."
-                : "최종 결론 도출"}
+                : conversationStage >= MAX_CONVERSATION_STAGES
+                ? "최종 결론 도출"
+                : "다음 의견 요청"}
             </button>
 
             <button
@@ -451,23 +461,31 @@ export default function ConclusionProcess() {
           {errorMessage && (
             <div className={styles.errorMessage}>
               <span>{errorMessage}</span>
-              <button onClick={retryResponse} disabled={isLoading}>
+              <button onClick={continueConversation} disabled={isLoading}>
                 재시도
               </button>
             </div>
           )}
         </div>
 
-        {/* 컨텐츠 섹션 */}
+        {/* 대화 컨텐츠 섹션 */}
         <div className={`${styles.contentSection} ${styles[viewMode]}`}>
-          {/* 각 모델의 분석 내용 - 카드 또는 리스트 뷰 */}
           {conclusionRecord.map((record, index) => (
-            <div key={index} className={styles.analysisCard}>
+            <div
+              key={index}
+              className={`${styles.analysisCard} ${
+                index % 2 === 0 ? styles.left : styles.right
+              }`}
+            >
               <div className={styles.analysisHeader}>
                 <h3>{record.model}</h3>
                 <span className={styles.roleBadge}>{record.role}</span>
+                {record.stage !== undefined && (
+                  <span className={styles.stageBadge}>
+                    단계 {record.stage + 1}
+                  </span>
+                )}
               </div>
-
               <div className={styles.analysisContent}>
                 <MarkdownRenderer>{record.content}</MarkdownRenderer>
               </div>
@@ -482,6 +500,9 @@ export default function ConclusionProcess() {
                 <span className={styles.roleBadge}>
                   {roleNames[modelRoles[currentModel] || "analyst"] || "분석가"}
                 </span>
+                <span className={styles.stageBadge}>
+                  단계 {conversationStage + 1}
+                </span>
               </div>
 
               <div className={styles.loadingContent}>
@@ -490,7 +511,7 @@ export default function ConclusionProcess() {
                   <span></span>
                   <span></span>
                 </div>
-                <p>분석 중입니다...</p>
+                <p>생각 중...</p>
               </div>
             </div>
           )}
@@ -505,7 +526,7 @@ export default function ConclusionProcess() {
               </div>
               <h3>최종 결론 도출 중...</h3>
               <p>
-                {conclusionSetting.finalModel} 모델이 모든 분석을 종합하여
+                {conclusionSetting.finalModel} 모델이 모든 대화를 종합하여
                 결론을 생성하고 있습니다.
               </p>
             </div>

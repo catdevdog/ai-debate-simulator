@@ -3,6 +3,14 @@ import { create } from "zustand";
 export type TypeSide = "Affirmative" | "Negative"; // 찬성, 반대
 export type TypeMode = "Debate" | "Conclusion"; // 토론 또는 결론 도출 모드
 
+type ConclusionRecordItem = {
+  model: string;
+  role: string;
+  perspective: string;
+  content: string;
+  stage?: number; // 대화 단계 번호를 저장할 선택적 필드 추가
+};
+
 interface TypeDebateState {
   maxTokensPerModel: number; // 각 모델 최대 토큰 수
   maxTextLength: number; // 각 모델 최대 텍스트 길이
@@ -43,12 +51,7 @@ interface TypeDebateState {
   }[];
 
   // 결론 도출 기록
-  conclusionRecord: {
-    model: string;
-    role: string; // 모델의 역할 (예: "분석가", "경제 전문가" 등)
-    perspective: string; // 분석 관점
-    content: string;
-  }[];
+  conclusionRecord: ConclusionRecordItem[];
 
   addDebateRecord: (record: {
     model: string;
@@ -56,12 +59,7 @@ interface TypeDebateState {
     content: string;
   }) => void;
 
-  addConclusionRecord: (record: {
-    model: string;
-    role: string;
-    perspective: string;
-    content: string;
-  }) => void;
+  addConclusionRecord: (record: ConclusionRecordItem) => void;
 
   currentModel: string;
   nextModel: string;
