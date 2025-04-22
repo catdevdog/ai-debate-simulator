@@ -478,8 +478,10 @@ export default function ConclusionProcess() {
               }`}
             >
               <div className={styles.analysisHeader}>
-                <h3>{record.model}</h3>
-                <span className={styles.roleBadge}>{record.role}</span>
+                <h3>
+                  <span className={styles.roleBadge}>{record.role}</span>
+                  {record.model}
+                </h3>
                 {record.stage !== undefined && (
                   <span className={styles.stageBadge}>
                     단계 {record.stage + 1}
@@ -496,10 +498,13 @@ export default function ConclusionProcess() {
           {isLoading && !isGeneratingFinalConclusion && (
             <div className={styles.loadingCard}>
               <div className={styles.loadingHeader}>
-                <h3>{currentModel}</h3>
-                <span className={styles.roleBadge}>
-                  {roleNames[modelRoles[currentModel] || "analyst"] || "분석가"}
-                </span>
+                <h3>
+                  <span className={styles.roleBadge}>
+                    {roleNames[modelRoles[currentModel] || "analyst"] ||
+                      "분석가"}
+                  </span>
+                  {currentModel}
+                </h3>
                 <span className={styles.stageBadge}>
                   단계 {conversationStage + 1}
                 </span>
