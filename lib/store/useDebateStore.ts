@@ -33,6 +33,8 @@ interface TypeDebateState {
     models: string[]; // 참여 모델 리스트
     finalModel: string; // 최종 결론을 내릴 모델
     requireEvidence: boolean; // 증거/근거 필요 여부
+    modelRoles: Record<string, string>; // 모델별 역할 매핑
+    customRoleDescriptions: Record<string, string>; // 맞춤형 전문가 설명
   };
 
   // 사용 모델 선택
@@ -89,7 +91,9 @@ interface TypeDebateState {
     subject: string,
     models: string[],
     finalModel: string,
-    requireEvidence: boolean
+    requireEvidence: boolean,
+    modelRoles?: Record<string, string>,
+    customRoleDescriptions?: Record<string, string>
   ) => void;
 
   setPrompt: (prompt: string) => void;
@@ -130,6 +134,8 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
     models: [],
     finalModel: "",
     requireEvidence: true,
+    modelRoles: {},
+    customRoleDescriptions: {},
   },
 
   useModels: [
@@ -173,7 +179,14 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
     }));
   },
 
-  setConclusionSetting: (subject, models, finalModel, requireEvidence) => {
+  setConclusionSetting: (
+    subject,
+    models,
+    finalModel,
+    requireEvidence,
+    modelRoles = {},
+    customRoleDescriptions = {}
+  ) => {
     set((state) => ({
       ...state,
       subject,
@@ -181,6 +194,8 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
         models,
         finalModel,
         requireEvidence,
+        modelRoles: modelRoles || {},
+        customRoleDescriptions: customRoleDescriptions || {},
       },
     }));
   },
@@ -213,8 +228,10 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
         models: [],
         finalModel: "",
         requireEvidence: true,
+        modelRoles: {},
+        customRoleDescriptions: {},
       },
-      useModels: state.useModels,
+      useModels: state.useModels, // 원래 로직대로 현재 상태 유지
       debateRecord: [],
       conclusionRecord: [],
       currentModel: "",
@@ -222,9 +239,9 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
       error: "",
       result: "",
       finalConclusion: "",
-      isLoading: false,
       isDebateFinished: false,
       isConclusionFinished: false,
-      usableModels: state.usableModels,
+      isLoading: false,
+      usableModels: state.usableModels, // 이 부분도 추가
     })),
 }));

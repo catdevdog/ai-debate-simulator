@@ -9,24 +9,57 @@ import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 // 전문가 역할에 따른 시스템 프롬프트 정의
 const expertisePrompts: Record<string, string> = {
+  expert:
+    "당신은 주어진 주제에 대한 전문가입니다. 다양한 관점에서 전문적인 분석을 간결하게 제공하세요.",
+  fact_checker:
+    "당신은 팩트체커입니다. 주장에 대한 사실 확인 및 검증을 통해 객관적인 의견을 간결하게 제시하세요.",
+  philosopher:
+    "당신은 철학자입니다. 윤리적, 철학적 관점에서 주제를 분석하고 간결하게 의견을 제시하세요.",
+  scientist:
+    "당신은 과학자입니다. 과학적 방법론과 데이터 기반으로 주제를 분석하고 간결하게 의견을 제시하세요.",
   analyst:
-    "당신은 데이터 분석가입니다. 데이터와 통계를 기반으로 간결하게 의견을 제시하세요.",
+    "당신은 데이터 분석가입니다. 정량적 데이터를 기반으로 객관적인 통계 기반 정보를 간결하게 제공하세요.",
   economist:
-    "당신은 경제 전문가입니다. 경제 이론과 시장 역학 관점에서 간결하게 의견을 제시하세요.",
+    "당신은 경제 전문가입니다. 경제 이론과 시장 역학 관점에서 주제를 분석하고 간결하게 의견을 제시하세요.",
   strategist:
-    "당신은 전략가입니다. 장기적 관점에서 간결하게 의견을 제시하세요.",
+    "당신은 전략가입니다. 장기적 관점에서 주제의 전략적 함의를 분석하고 간결하게 의견을 제시하세요.",
   historian:
-    "당신은 역사 전문가입니다. 역사적 패턴과 과거 사례를 기반으로 간결하게 의견을 제시하세요.",
-  critic: "당신은 비평가입니다. 비판적 관점에서 간결하게 의견을 제시하세요.",
+    "당신은 역사 전문가입니다. 역사적 패턴과 과거 사례를 기반으로 주제를 분석하고 간결하게 의견을 제시하세요.",
+  critic:
+    "당신은 비평가입니다. 비판적 관점에서 주제를 분석하고 대안을 간결하게 제시하세요.",
+  tech_expert:
+    "당신은 기술 전문가입니다. 기술 동향 및 혁신 관점에서 주제를 분석하고 간결하게 의견을 제시하세요.",
+  legal_expert:
+    "당신은 법률 전문가입니다. 법적 측면과 규제 관점에서 주제를 분석하고 간결하게 의견을 제시하세요.",
+  ethical_expert:
+    "당신은 윤리 전문가입니다. 윤리적 관점과 사회적 영향력 측면에서 주제를 분석하고 간결하게 의견을 제시하세요.",
+  psychology_expert:
+    "당신은 심리학 전문가입니다. 인간 행동 및 심리학적 관점에서 주제를 분석하고 간결하게 의견을 제시하세요.",
+  environmental_expert:
+    "당신은 환경 전문가입니다. 환경적 영향과 지속가능성 관점에서 주제를 분석하고 간결하게 의견을 제시하세요.",
+  medical_expert:
+    "당신은 의료 전문가입니다. 의학적 관점과 건강 관련 정보를 바탕으로 주제를 분석하고 간결하게 의견을 제시하세요.",
+  // custom_expert는 동적으로 처리됨
 };
 
 // 역할 ID에 따른 한글 이름
 const roleNames: Record<string, string> = {
+  expert: "전문가",
+  fact_checker: "팩트체커",
+  philosopher: "철학자",
+  scientist: "과학자",
   analyst: "데이터 분석가",
   economist: "경제 전문가",
   strategist: "전략가",
   historian: "역사 전문가",
   critic: "비평가",
+  tech_expert: "기술 전문가",
+  legal_expert: "법률 전문가",
+  ethical_expert: "윤리 전문가",
+  psychology_expert: "심리학 전문가",
+  environmental_expert: "환경 전문가",
+  medical_expert: "의료 전문가",
+  custom_expert: "맞춤형 전문가",
 };
 
 export default function ConclusionProcess() {
@@ -53,7 +86,6 @@ export default function ConclusionProcess() {
   const [conversationStage, setConversationStage] = useState<number>(0);
   const [isGeneratingFinalConclusion, setIsGeneratingFinalConclusion] =
     useState<boolean>(false);
-  const [modelRoles, setModelRoles] = useState<Record<string, string>>({});
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [discussionTopic, setDiscussionTopic] = useState<string>("");
   const autoProgressRef = useRef(false);
@@ -71,16 +103,6 @@ export default function ConclusionProcess() {
       router.push("/conclusion-setup");
       return;
     }
-
-    // 모델별 역할 임의 할당 (실제로는 이전 설정 페이지에서 가져와야 함)
-    const roles: Record<string, string> = {};
-    const roleOptions = Object.keys(expertisePrompts);
-
-    conclusionSetting.models.forEach((model, index) => {
-      roles[model] = roleOptions[index % roleOptions.length];
-    });
-
-    setModelRoles(roles);
 
     if (conclusionSetting.models.length > 0) {
       setCurrentModel(conclusionSetting.models[0]);
@@ -145,11 +167,41 @@ export default function ConclusionProcess() {
     setViewMode((prev) => (prev === "card" ? "list" : "card"));
   };
 
+  // 전문가 역할 프롬프트 생성 - 맞춤형 전문가 지원 추가
+  const getExpertPrompt = (model: string) => {
+    const roleId = conclusionSetting.modelRoles[model] || "expert";
+
+    // 맞춤형 전문가인 경우 사용자 정의 설명 사용
+    if (roleId === "custom_expert") {
+      const customDescription =
+        conclusionSetting.customRoleDescriptions[model] || "";
+      return `당신은 ${customDescription} 전문가입니다. 전문 분야의 관점에서 주제를 분석하고 간결하게 의견을 제시하세요.`;
+    }
+
+    // 미리 정의된 역할 사용
+    return expertisePrompts[roleId] || expertisePrompts.expert;
+  };
+
+  // 역할 이름 가져오기 - 맞춤형 전문가 지원 추가
+  const getRoleName = (model: string) => {
+    const roleId = conclusionSetting.modelRoles[model] || "expert";
+
+    if (roleId === "custom_expert") {
+      const customDescription =
+        conclusionSetting.customRoleDescriptions[model] || "";
+      return customDescription
+        ? `${customDescription} 전문가`
+        : "맞춤형 전문가";
+    }
+
+    return roleNames[roleId] || "전문가";
+  };
+
   // 대화 단계별 프롬프트 생성
   const createConversationPrompt = (stage: number) => {
     const model = currentModel;
-    const role = modelRoles[model] || "analyst";
-    const expertise = expertisePrompts[role] || "";
+    const expertPrompt = getExpertPrompt(model);
+    const roleName = getRoleName(model);
 
     // 이전 대화 내용 수집
     const previousMessages = conclusionRecord
@@ -173,15 +225,13 @@ export default function ConclusionProcess() {
 
     // 최종 프롬프트 구성
     let prompt = `주제: ${subject}\n\n`;
-    prompt += `${expertise}\n\n`;
+    prompt += `${expertPrompt}\n\n`;
 
     if (previousMessages) {
       prompt += `이전 대화 내용:\n\n${previousMessages}\n\n`;
     }
 
-    prompt += `당신은 ${model} 모델로, ${
-      roleNames[role] || role
-    }의 관점에서 대화에 참여하고 있습니다.\n\n`;
+    prompt += `당신은 ${model} 모델로, ${roleName}의 관점에서 대화에 참여하고 있습니다.\n\n`;
     prompt += stageInstruction;
     prompt += `\n\n반드시 3문장 이내의 간결한 답변으로 작성하세요. 장황한 설명이나 불필요한 인사말은 생략하고 핵심만 말하세요.`;
 
@@ -215,7 +265,8 @@ export default function ConclusionProcess() {
   // AI 응답 처리
   const handleAIResponse = async () => {
     const model = currentModel;
-    const role = modelRoles[model] || "analyst";
+    const roleName = getRoleName(model);
+    const roleId = conclusionSetting.modelRoles[model] || "expert";
 
     try {
       setIsLoading(true);
@@ -225,7 +276,7 @@ export default function ConclusionProcess() {
       const prompt = createConversationPrompt(conversationStage);
 
       // AI 응답 가져오기 - 모드와 역할 전달
-      const response = await AI(model, prompt, "Conclusion", role);
+      const response = await AI(model, prompt, "Conclusion", roleId);
 
       // 오류 응답 확인
       if (response.startsWith("[") && response.includes("오류")) {
@@ -235,8 +286,8 @@ export default function ConclusionProcess() {
       // 응답 기록 추가 (단계 정보 포함)
       addConclusionRecord({
         model,
-        role: roleNames[role] || role,
-        perspective: role,
+        role: roleName,
+        perspective: roleId,
         content: response,
         stage: conversationStage, // 대화 단계 정보 추가
       });
@@ -500,8 +551,7 @@ export default function ConclusionProcess() {
               <div className={styles.loadingHeader}>
                 <h3>
                   <span className={styles.roleBadge}>
-                    {roleNames[modelRoles[currentModel] || "analyst"] ||
-                      "분석가"}
+                    {getRoleName(currentModel)}
                   </span>
                   {currentModel}
                 </h3>
