@@ -95,6 +95,8 @@ export default function ConclusionProcess() {
 
   // 카드 뷰/리스트 뷰 전환
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
+  // 이미 있는 viewMode 상태와 함께 확장/축소 상태 추가
+  const [expandedCards, setExpandedCards] = useState<number[]>([]);
 
   // 컴포넌트 마운트 시 초기화
   useEffect(() => {
@@ -423,6 +425,13 @@ export default function ConclusionProcess() {
     return `논의 단계 ${conversationStage}`;
   };
 
+  // 카드 확장/축소 토글 함수 추가
+  const toggleCardExpand = (index: number) => {
+    setExpandedCards((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
+
   // 렌더링
   return (
     <div className={styles.container}>
@@ -495,9 +504,9 @@ export default function ConclusionProcess() {
 
             <button
               onClick={toggleViewMode}
-              className={styles.viewToggleButton}
+              className={`${styles.viewToggleButton} ${styles[viewMode]}`}
             >
-              {viewMode === "card" ? "리스트 뷰" : "카드 뷰"}
+              {viewMode === "card" ? "리스트 뷰로 보기" : "카드 뷰로 보기"}
             </button>
 
             <button
@@ -526,7 +535,12 @@ export default function ConclusionProcess() {
               key={index}
               className={`${styles.analysisCard} ${
                 index % 2 === 0 ? styles.left : styles.right
+              } ${
+                viewMode === "list" && !expandedCards.includes(index)
+                  ? styles.collapsed
+                  : ""
               }`}
+              data-role={record.perspective || "expert"}
             >
               <div className={styles.analysisHeader}>
                 <h3>
@@ -538,6 +552,15 @@ export default function ConclusionProcess() {
                     단계 {record.stage + 1}
                   </span>
                 )}
+                {viewMode === "list" && (
+                  <button
+                    className={styles.expandToggle}
+                    onClick={() => toggleCardExpand(index)}
+                    aria-label="카드 확장/축소 토글"
+                  >
+                    {expandedCards.includes(index) ? "−" : "+"}
+                  </button>
+                )}
               </div>
               <div className={styles.analysisContent}>
                 <MarkdownRenderer>{record.content}</MarkdownRenderer>
@@ -547,7 +570,10 @@ export default function ConclusionProcess() {
 
           {/* 로딩 메시지 */}
           {isLoading && !isGeneratingFinalConclusion && (
-            <div className={styles.loadingCard}>
+            <div
+              className={styles.loadingCard}
+              data-role={conclusionSetting.modelRoles[currentModel] || "expert"}
+            >
               <div className={styles.loadingHeader}>
                 <h3>
                   <span className={styles.roleBadge}>
