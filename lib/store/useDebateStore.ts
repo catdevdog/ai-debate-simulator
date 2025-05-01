@@ -1,93 +1,77 @@
 import { create } from "zustand";
 
-export type TypeSide = "Affirmative" | "Negative"; // 찬성, 반대
-export type TypeMode = "Debate" | "Conclusion"; // 토론 또는 결론 도출 모드
+// 타입 분리 및 export
+export type TypeSide = "Affirmative" | "Negative";
+export type TypeMode = "Debate" | "Conclusion";
 
-type ConclusionRecordItem = {
+// 개별 항목 타입을 명확히 export
+export interface ConclusionRecordItem {
   model: string;
   role: string;
   perspective: string;
   content: string;
-  stage?: number; // 대화 단계 번호를 저장할 선택적 필드 추가
-};
+  stage?: number;
+}
 
+export interface DebateRecordItem {
+  model: string;
+  side: TypeSide;
+  content: string;
+}
+
+export interface UseModelItem {
+  name: string;
+  side: TypeSide;
+}
+
+export interface DebateSetting {
+  startModel: string;
+  answerLimit: number;
+}
+
+export interface ConclusionSetting {
+  models: string[];
+  finalModel: string;
+  requireEvidence: boolean;
+  modelRoles: Record<string, string>;
+  customRoleDescriptions: Record<string, string>;
+}
+
+// 메인 상태 인터페이스는 분리된 타입을 참조
 interface TypeDebateState {
-  maxTokensPerModel: number; // 각 모델 최대 토큰 수
-  maxTextLength: number; // 각 모델 최대 텍스트 길이
-
-  usableModels: string[]; // 사용 가능한 모델
-
-  // 모드 선택
+  maxTokensPerModel: number;
+  maxTextLength: number;
+  usableModels: string[];
   mode: TypeMode;
-
-  // 토론 세팅
-  subject: string; // 주제
-  prompt: string; // 전달 할 프롬프트 (이전 대화내용을 포함해야함)
-  debateSetting: {
-    startModel: string; // 시작 모델
-    answerLimit: number; // 각 모델 답변 제한 (= debate round)
-  };
-
-  // 결론 모드 세팅
-  conclusionSetting: {
-    models: string[]; // 참여 모델 리스트
-    finalModel: string; // 최종 결론을 내릴 모델
-    requireEvidence: boolean; // 증거/근거 필요 여부
-    modelRoles: Record<string, string>; // 모델별 역할 매핑
-    customRoleDescriptions: Record<string, string>; // 맞춤형 전문가 설명
-  };
-
-  // 사용 모델 선택
-  useModels: {
-    // 모델
-    name: string;
-    side: TypeSide;
-  }[];
-
-  // 토론 기록
-  debateRecord: {
-    // 모델 대화 목록
-    model: string;
-    side: TypeSide;
-    content: string;
-  }[];
-
-  // 결론 도출 기록
-  conclusionRecord: ConclusionRecordItem[];
-
-  addDebateRecord: (record: {
-    model: string;
-    side: TypeSide;
-    content: string;
-  }) => void;
-
-  addConclusionRecord: (record: ConclusionRecordItem) => void;
-
+  subject: string;
+  prompt: string; // 사용 용도 확인 필요 (ConclusionProcess에서는 직접 사용 안 함)
+  debateSetting: DebateSetting; // 타입 참조
+  conclusionSetting: ConclusionSetting; // 타입 참조
+  useModels: UseModelItem[]; // 타입 참조 (Debate 모드용)
+  debateRecord: DebateRecordItem[]; // 타입 참조
+  conclusionRecord: ConclusionRecordItem[]; // 타입 참조
   currentModel: string;
-  nextModel: string;
-
+  nextModel: string; // 사용 용도 확인 필요 (ConclusionProcess에서는 직접 사용 안 함)
   isLoading: boolean;
-
   error: string;
-
   isDebateFinished: boolean;
   isConclusionFinished: boolean;
-
   finalConclusion: string;
-  result: string;
+  result: string; // 사용 용도 확인 필요 (Debate 모드 결과?)
 
+  // 액션 정의 (동일)
+  addDebateRecord: (record: DebateRecordItem) => void;
+  addConclusionRecord: (record: ConclusionRecordItem) => void;
   setMode: (mode: TypeMode) => void;
   setInitialSetting: (
+    // Debate 모드 초기 설정용
     subject: string,
     prompt: string,
-    debateSetting: {
-      startModel: string;
-      answerLimit: number;
-    },
-    useModels: { name: string; side: TypeSide }[]
+    debateSetting: DebateSetting,
+    useModels: UseModelItem[]
   ) => void;
-
   setConclusionSetting: (
+    // Conclusion 모드 초기 설정용
     subject: string,
     models: string[],
     finalModel: string,
@@ -95,9 +79,7 @@ interface TypeDebateState {
     modelRoles?: Record<string, string>,
     customRoleDescriptions?: Record<string, string>
   ) => void;
-
   setPrompt: (prompt: string) => void;
-
   setCurrentModel: (model: string) => void;
   setNextModel: (model: string) => void;
   setResult: (result: string) => void;
@@ -106,30 +88,26 @@ interface TypeDebateState {
   setIsLoading: (isLoading: boolean) => void;
   setIsDebateFinished: (isFinished: boolean) => void;
   setIsConclusionFinished: (isFinished: boolean) => void;
-
   settingReset: () => void;
 }
 
+// create 함수는 동일
 export const useDebateStore = create<TypeDebateState>((set) => ({
-  // api단에 어떻게 전달?
-  maxTokensPerModel: 1000, // 각 모델 최대 토큰 수
-  maxTextLength: 100, // 각 모델 최대 텍스트 길이
-
+  // get 추가 (reset 등에서 초기값 필요 시 사용)
+  maxTokensPerModel: 1000,
+  maxTextLength: 100,
   usableModels: [
     "gpt-4o",
     "claude-3-5-haiku-latest",
     "claude-3-7-sonnet-latest",
-  ], // 사용 가능한 모델
-
-  mode: "Debate", // 기본 모드는 토론
-
+  ],
+  mode: "Debate", // 기본 모드
   subject: "",
   prompt: "",
   debateSetting: {
     startModel: "",
     answerLimit: 3,
   },
-
   conclusionSetting: {
     models: [],
     finalModel: "",
@@ -137,28 +115,14 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
     modelRoles: {},
     customRoleDescriptions: {},
   },
-
   useModels: [
+    // 기본값 예시
     { name: "gpt-4o", side: "Affirmative" },
     { name: "claude-3-5-haiku-latest", side: "Negative" },
-  ], // 사용 모델 선택
-
+  ],
   isLoading: false,
-
   debateRecord: [],
-  addDebateRecord: (record) =>
-    set((state) => ({
-      ...state,
-      debateRecord: [...state.debateRecord, record],
-    })),
-
   conclusionRecord: [],
-  addConclusionRecord: (record) =>
-    set((state) => ({
-      ...state,
-      conclusionRecord: [...state.conclusionRecord, record],
-    })),
-
   currentModel: "",
   nextModel: "",
   error: "",
@@ -167,18 +131,31 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
   isDebateFinished: false,
   isConclusionFinished: false,
 
-  setMode: (mode) => set((state) => ({ ...state, mode })),
-
-  setInitialSetting: (subject, prompt, debateSetting, useModels) => {
-    set((state) => ({
-      ...state,
+  // 액션 구현 (동일 - 타입만 참조하도록 변경됨)
+  addDebateRecord: (record) =>
+    set((state) => ({ debateRecord: [...state.debateRecord, record] })),
+  addConclusionRecord: (record) =>
+    set((state) => ({ conclusionRecord: [...state.conclusionRecord, record] })),
+  setMode: (mode) => set({ mode }), // 간결하게 표현 가능
+  setInitialSetting: (subject, prompt, debateSetting, useModels) =>
+    set({
       subject,
       prompt,
       debateSetting,
       useModels,
-    }));
-  },
-
+      // 초기화 시 관련 상태 초기화
+      debateRecord: [],
+      conclusionRecord: [],
+      currentModel: debateSetting.startModel, // 시작 모델 설정
+      nextModel: "", // 필요 시 설정
+      error: "",
+      result: "",
+      finalConclusion: "",
+      isDebateFinished: false,
+      isConclusionFinished: false,
+      isLoading: false,
+      mode: "Debate", // 모드 명시
+    }),
   setConclusionSetting: (
     subject,
     models,
@@ -186,9 +163,8 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
     requireEvidence,
     modelRoles = {},
     customRoleDescriptions = {}
-  ) => {
-    set((state) => ({
-      ...state,
+  ) =>
+    set({
       subject,
       conclusionSetting: {
         models,
@@ -197,33 +173,35 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
         modelRoles: modelRoles || {},
         customRoleDescriptions: customRoleDescriptions || {},
       },
-    }));
-  },
-
-  setPrompt: (prompt) => set((state) => ({ ...state, prompt })),
-
-  setCurrentModel: (model) =>
-    set((state) => ({ ...state, currentModel: model })),
-  setNextModel: (model) => set((state) => ({ ...state, nextModel: model })),
-  setResult: (result) => set((state) => ({ ...state, result })),
-  setFinalConclusion: (conclusion) =>
-    set((state) => ({ ...state, finalConclusion: conclusion })),
-  setError: (error) => set((state) => ({ ...state, error })),
-  setIsLoading: (isLoading) => set((state) => ({ ...state, isLoading })),
-  setIsDebateFinished: (isFinished) =>
-    set((state) => ({ ...state, isDebateFinished: isFinished })),
+      // 초기화 시 관련 상태 초기화
+      debateRecord: [],
+      conclusionRecord: [],
+      currentModel: models.length > 0 ? models[0] : "", // 첫 번째 모델을 현재 모델로
+      nextModel: "",
+      error: "",
+      result: "",
+      finalConclusion: "",
+      isDebateFinished: false,
+      isConclusionFinished: false,
+      isLoading: false,
+      mode: "Conclusion", // 모드 명시
+    }),
+  setPrompt: (prompt) => set({ prompt }),
+  setCurrentModel: (model) => set({ currentModel: model }),
+  setNextModel: (model) => set({ nextModel: model }),
+  setResult: (result) => set({ result }),
+  setFinalConclusion: (conclusion) => set({ finalConclusion: conclusion }),
+  setError: (error) => set({ error }),
+  setIsLoading: (isLoading) => set({ isLoading }),
+  setIsDebateFinished: (isFinished) => set({ isDebateFinished: isFinished }),
   setIsConclusionFinished: (isFinished) =>
-    set((state) => ({ ...state, isConclusionFinished: isFinished })),
-
+    set({ isConclusionFinished: isFinished }),
   settingReset: () =>
-    set((state) => ({
-      ...state,
+    set({
+      // get() 사용 불필요 시 제거 가능, 기본값 직접 명시
       subject: "",
       prompt: "",
-      debateSetting: {
-        startModel: "",
-        answerLimit: 3,
-      },
+      debateSetting: { startModel: "", answerLimit: 3 },
       conclusionSetting: {
         models: [],
         finalModel: "",
@@ -231,7 +209,9 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
         modelRoles: {},
         customRoleDescriptions: {},
       },
-      useModels: state.useModels, // 원래 로직대로 현재 상태 유지
+      // useModels는 보통 유지하거나 초기 설정값으로 돌림
+      // useModels: get().useModels, // 이전 상태 유지 시
+      // useModels: [ { name: "gpt-4o", side: "Affirmative" }, ... ], // 기본값으로 리셋 시
       debateRecord: [],
       conclusionRecord: [],
       currentModel: "",
@@ -242,6 +222,8 @@ export const useDebateStore = create<TypeDebateState>((set) => ({
       isDebateFinished: false,
       isConclusionFinished: false,
       isLoading: false,
-      usableModels: state.usableModels, // 이 부분도 추가
-    })),
+    }),
 }));
+
+// --- 다른 파일에서의 import 예시 ---
+// import { useDebateStore, type ConclusionSetting, type ConclusionRecordItem } from '@/lib/store/useDebateStore';
