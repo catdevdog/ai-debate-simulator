@@ -1,7 +1,6 @@
-// src/hooks/useConclusionProcess.ts (또는 hooks/useConclusionProcess.ts)
+// src/hooks/useConclusionProcess.ts
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-// 실제 경로에 맞게 수정하세요.
 import { useDebateStore } from "@/lib/store/useDebateStore";
 import { AI } from "@/api/ai";
 import {
@@ -25,7 +24,7 @@ export const useConclusionProcess = () => {
     finalConclusion,
     setCurrentModel,
     setIsLoading,
-    setError, // 스토어의 setError 사용
+    setError,
     addConclusionRecord,
     setIsConclusionFinished,
     setFinalConclusion,
@@ -111,7 +110,7 @@ export const useConclusionProcess = () => {
       setIsGeneratingFinalConclusion,
       setErrorMessage,
     ]
-  ); // autoProgressRef는 ref이므로 의존성 배열 불필요
+  );
 
   // 최종 결론 생성 (handleError에서 호출 가능하도록 분리)
   const generateFinalConclusion = useCallback(async () => {
@@ -142,7 +141,7 @@ export const useConclusionProcess = () => {
       setIsGeneratingFinalConclusion(false);
     } catch (err) {
       // handleError 호출 시 현재 함수(generateFinalConclusion)를 재시도 함수로 전달
-      await handleError(err, generateFinalConclusion); // await 추가
+      await handleError(err, generateFinalConclusion);
     }
   }, [
     isLoading,
@@ -155,7 +154,7 @@ export const useConclusionProcess = () => {
     setErrorMessage,
     setFinalConclusion,
     setIsConclusionFinished,
-    handleError, // handleError 추가
+    handleError,
   ]);
 
   // AI 응답 처리 (handleError에서 호출 가능하도록 분리)
@@ -174,7 +173,7 @@ export const useConclusionProcess = () => {
         !finalConclusion &&
         !isGeneratingFinalConclusion
       ) {
-        await generateFinalConclusion(); // await 추가
+        await generateFinalConclusion();
       }
       return;
     }
@@ -228,7 +227,7 @@ export const useConclusionProcess = () => {
           !finalConclusion &&
           !isGeneratingFinalConclusion
         ) {
-          await generateFinalConclusion(); // await 추가
+          await generateFinalConclusion();
         }
       } else {
         // 다음 모델 진행
@@ -238,7 +237,7 @@ export const useConclusionProcess = () => {
       setIsLoading(false); // AI 응답 완료 후 로딩 해제
     } catch (err) {
       // handleError 호출 시 현재 함수(handleAIResponse)를 재시도 함수로 전달
-      await handleError(err, handleAIResponse); // await 추가
+      await handleError(err, handleAIResponse);
     }
   }, [
     isLoading,
@@ -259,7 +258,7 @@ export const useConclusionProcess = () => {
     handleError,
     finalConclusion,
     isGeneratingFinalConclusion,
-    generateFinalConclusion, // generateFinalConclusion 의존성 추가
+    generateFinalConclusion,
   ]);
 
   // 자동 진행 로직
@@ -280,17 +279,16 @@ export const useConclusionProcess = () => {
 
       if (conversationStage >= MAX_CONVERSATION_STAGES) {
         if (!finalConclusion && !isGeneratingFinalConclusion) {
-          await generateFinalConclusion(); // await 추가
+          await generateFinalConclusion();
         }
       } else if (allModelsSpokeInCurrentStage) {
         // 모든 모델이 발언 완료했고, 다음 단계 시작 준비 완료 상태
         // handleAIResponse 내부에서 stage와 model을 업데이트하므로, 바로 호출
-        await handleAIResponse(); // await 추가
+        await handleAIResponse();
       } else {
         // 현재 스테이지 진행 중, 다음 모델 응답 요청 (약간의 딜레이 후)
         timeoutId = setTimeout(async () => {
-          // async 추가
-          await handleAIResponse(); // await 추가
+          await handleAIResponse();
         }, 1000); // 1초 후 다음 응답 요청
       }
     };
@@ -302,26 +300,21 @@ export const useConclusionProcess = () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [
-    // 자동 진행 로직이 반응해야 하는 상태들
     isLoading,
     isConclusionFinished,
     conversationStage,
-    conclusionRecord, // 새 기록이 추가되면 다시 체크
+    conclusionRecord,
     conclusionSetting.models.length,
     finalConclusion,
     isGeneratingFinalConclusion,
-    handleAIResponse, // 실행할 함수
-    generateFinalConclusion, // 실행할 함수
-    // autoProgressRef.current 값의 변경은 useEffect를 트리거하지 않으므로 의존성 배열에 넣지 않음
-    // 대신, 이 effect는 autoProgressRef.current가 true일 때만 실행됨
+    handleAIResponse,
+    generateFinalConclusion,
   ]);
 
   const startAutoProgress = useCallback(() => {
     if (!isConclusionFinished && !isLoading) {
       autoProgressRef.current = true;
       setErrorMessage(null); // 자동 진행 시작 시 에러 메시지 초기화
-      // 자동 진행 시작 시 즉시 첫 액션 트리거 (useEffect가 처리하도록 변경)
-      // 즉시 트리거를 원하면 여기서 handleAIResponse() 또는 generateFinalConclusion() 호출
       if (conversationStage >= MAX_CONVERSATION_STAGES) {
         if (!finalConclusion && !isGeneratingFinalConclusion) {
           generateFinalConclusion(); // 즉시 시작
@@ -346,14 +339,13 @@ export const useConclusionProcess = () => {
 
   // 수동 진행 (자동 진행 중지 포함)
   const continueConversation = useCallback(async () => {
-    // async 추가
     if (!isLoading) {
       autoProgressRef.current = false; // 수동 진행 시 자동 진행 중지
       setErrorMessage(null); // 수동 진행 시 에러 메시지 초기화
       if (conversationStage >= MAX_CONVERSATION_STAGES) {
-        await generateFinalConclusion(); // await 추가
+        await generateFinalConclusion();
       } else {
-        await handleAIResponse(); // await 추가
+        await handleAIResponse();
       }
     }
   }, [isLoading, conversationStage, generateFinalConclusion, handleAIResponse]);
@@ -375,16 +367,16 @@ export const useConclusionProcess = () => {
     isLoading,
     isConclusionFinished,
     finalConclusion,
-    currentStep, // 디버깅 또는 특정 UI 표시에 필요할 수 있음
+    currentStep,
     conversationStage,
     isGeneratingFinalConclusion,
     errorMessage,
-    autoProgressEnabled: autoProgressRef.current, // Ref 값을 상태처럼 반환
+    autoProgressEnabled: autoProgressRef.current,
 
     // Handlers
     startAutoProgress,
     stopAutoProgress,
-    continueConversation, // 수동 진행 및 재시도 버튼용 핸들러
-    getCurrentRoleName, // 로딩 카드용 역할 이름
+    continueConversation,
+    getCurrentRoleName,
   };
 };
