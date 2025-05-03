@@ -14,10 +14,22 @@ export async function AI(
   const timeoutId = setTimeout(() => controller.abort(), 20000);
 
   try {
+    // Conclusion 모드일 때 추가 옵션 설정
+    const additionalOptions =
+      mode === "Conclusion"
+        ? {
+            temperature: 0.5,
+            top_p: 0.9,
+            max_tokens: 2000,
+            presence_penalty: -0.5, // 중복 회피를 줄임
+            frequency_penalty: -0.3, // 자연스러운 반복 허용
+          }
+        : {};
+
     const response = await fetch(`/api/${model}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, mode, role }),
+      body: JSON.stringify({ prompt, mode, role, ...additionalOptions }),
       signal: controller.signal,
     });
 

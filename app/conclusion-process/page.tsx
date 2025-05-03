@@ -1,4 +1,3 @@
-// src/app/conclusion-process/page.tsx
 "use client";
 
 import React from "react";
@@ -17,7 +16,6 @@ import FinalConclusionDisplay from "@/components/Conclusion/FinalConclusionDispl
 import { MAX_CONVERSATION_STAGES } from "@/lib/conclusionUtils";
 
 export default function ConclusionProcess() {
-  // 커스텀 훅 사용
   const {
     subject,
     conclusionSetting,
@@ -36,88 +34,110 @@ export default function ConclusionProcess() {
     getCurrentRoleName,
   } = useConclusionProcess();
 
-  // 로딩 카드에 필요한 현재 모델의 역할 ID 가져오기
   const currentModelRoleId = currentModel
     ? conclusionSetting.modelRoles[currentModel] || "expert"
     : "expert";
 
-  // subject가 아직 로드되지 않았거나 설정이 없으면 로딩 상태나 빈 화면 표시
   if (!subject || !conclusionSetting) {
-    return <div>Loading settings...</div>;
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingContainer}>
+          <div className={styles.loadingAnimation}>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <p>설정을 불러오는 중...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className={styles.container}>
       <div className={styles.conclusionContainer}>
-        {/* 헤더 */}
-        <ConclusionHeader
-          subject={subject}
-          conversationStage={conversationStage}
-          isLoading={
-            isLoading &&
-            !isGeneratingFinalConclusion &&
-            conversationStage < MAX_CONVERSATION_STAGES
-          }
-        />
+        {/* 헤더 섹션 */}
+        <header className={styles.pageHeader}>
+          <ConclusionHeader
+            subject={subject}
+            conversationStage={conversationStage}
+            isLoading={
+              isLoading &&
+              !isGeneratingFinalConclusion &&
+              conversationStage < MAX_CONVERSATION_STAGES
+            }
+          />
+        </header>
 
-        {/* 컨트롤러 */}
-        <ConclusionControls
-          isLoading={isLoading}
-          isGeneratingFinalConclusion={isGeneratingFinalConclusion}
-          isConclusionFinished={isConclusionFinished}
-          conversationStage={conversationStage}
-          autoProgressEnabled={autoProgressEnabled}
-          onContinue={continueConversation}
-          onStartAuto={startAutoProgress}
-          onStopAuto={stopAutoProgress}
-        />
-
-        {/* 에러 메시지 */}
-        <ErrorMessageDisplay
-          errorMessage={errorMessage}
-          isLoading={isLoading}
-          onRetry={continueConversation}
-        />
-
-        {/* 대화 내용 섹션 */}
-        <div className={styles.contentSection}>
-          {/* 이전 대화 기록 렌더링 */}
-          {conclusionRecord.map((record, index) => (
-            <ConversationCard
-              key={`${record.model}-${index}`}
-              record={record}
-              index={index}
+        {/* 메인 컨텐츠 섹션 */}
+        <main className={styles.mainContent}>
+          {/* 컨트롤러 */}
+          <section className={styles.controlSection}>
+            <ConclusionControls
+              isLoading={isLoading}
+              isGeneratingFinalConclusion={isGeneratingFinalConclusion}
+              isConclusionFinished={isConclusionFinished}
+              conversationStage={conversationStage}
+              autoProgressEnabled={autoProgressEnabled}
+              onContinue={continueConversation}
+              onStartAuto={startAutoProgress}
+              onStopAuto={stopAutoProgress}
             />
-          ))}
+          </section>
 
-          {/* 다음 AI 응답 로딩 표시 */}
-          {isLoading &&
-            !isGeneratingFinalConclusion &&
-            !isConclusionFinished &&
-            currentModel && (
-              <LoadingCard
-                model={currentModel}
-                role={getCurrentRoleName()}
-                stage={conversationStage}
-                modelRoleKey={currentModelRoleId}
+          {/* 상태 메시지 섹션 */}
+          {errorMessage && (
+            <section className={styles.statusSection}>
+              <ErrorMessageDisplay
+                errorMessage={errorMessage}
+                isLoading={isLoading}
+                onRetry={continueConversation}
               />
-            )}
-
-          {/* 최종 결론 생성 로딩 표시 */}
-          {isGeneratingFinalConclusion && (
-            <FinalConclusionLoading
-              finalModelName={conclusionSetting.finalModel}
-            />
+            </section>
           )}
 
-          {/* 최종 결론 표시 */}
-          {finalConclusion && !isGeneratingFinalConclusion && (
-            <FinalConclusionDisplay
-              conclusion={finalConclusion}
-              model={conclusionSetting.finalModel}
-            />
-          )}
-        </div>
+          {/* 대화 내용 섹션 */}
+          <section className={styles.conversationSection}>
+            <div className={styles.conversationList}>
+              {/* 이전 대화 기록 */}
+              {conclusionRecord.map((record, index) => (
+                <ConversationCard
+                  key={`${record.model}-${index}`}
+                  record={record}
+                  index={index}
+                />
+              ))}
+
+              {/* 로딩 카드 */}
+              {isLoading &&
+                !isGeneratingFinalConclusion &&
+                !isConclusionFinished &&
+                currentModel && (
+                  <LoadingCard
+                    model={currentModel}
+                    role={getCurrentRoleName()}
+                    stage={conversationStage}
+                    modelRoleKey={currentModelRoleId}
+                  />
+                )}
+
+              {/* 최종 결론 로딩 */}
+              {isGeneratingFinalConclusion && (
+                <FinalConclusionLoading
+                  finalModelName={conclusionSetting.finalModel}
+                />
+              )}
+
+              {/* 최종 결론 */}
+              {finalConclusion && !isGeneratingFinalConclusion && (
+                <FinalConclusionDisplay
+                  conclusion={finalConclusion}
+                  model={conclusionSetting.finalModel}
+                />
+              )}
+            </div>
+          </section>
+        </main>
       </div>
     </div>
   );

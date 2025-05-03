@@ -1,6 +1,5 @@
-// src/components/Conclusion/ConclusionHeader.tsx
+// ConclusionHeader.tsx 수정 버전
 import React from "react";
-// CSS 모듈 경로 주의! - 실제 page.module.scss 위치에 맞게 조정 필요
 import styles from "../../app/conclusion-process/page.module.scss";
 import {
   MAX_CONVERSATION_STAGES,
@@ -10,7 +9,7 @@ import {
 interface Props {
   subject: string;
   conversationStage: number;
-  isLoading: boolean; // 현재 '단계' 진행 중 로딩 여부
+  isLoading: boolean;
 }
 
 const ConclusionHeader: React.FC<Props> = ({
@@ -18,34 +17,69 @@ const ConclusionHeader: React.FC<Props> = ({
   conversationStage,
   isLoading,
 }) => {
+  // 단계별 이름을 정의
+  const getStepLabel = (index: number) => {
+    if (index >= MAX_CONVERSATION_STAGES) return "최종 결론";
+
+    const stepLabels = ["초기 의견", "심층 분석", "관점 통합"];
+
+    return stepLabels[index] || `단계 ${index + 1}`;
+  };
+
   return (
     <div className={styles.header}>
-      <h1>결론 도출 프로세스</h1>
-      <h2>주제: {subject}</h2>
+      <div className={styles.headerContent}>
+        <h1 className={styles.title}>결론 도출 분석</h1>
+        <h2 className={styles.subtitle}>
+          <span className={styles.subjectLabel}>분석 주제</span>
+          <span className={styles.subjectText}>{subject}</span>
+        </h2>
+      </div>
+
       <div className={styles.progressIndicator}>
+        {/* 현재 단계 표시 */}
+        <div className={styles.stageIndicator}>
+          <span className={styles.stageLabel}>
+            {conversationStage >= MAX_CONVERSATION_STAGES
+              ? "최종 결론 단계"
+              : `${conversationStage + 1}/${MAX_CONVERSATION_STAGES} 단계`}
+          </span>
+          <span className={styles.stageDescription}>
+            {getStageDescription(conversationStage)}
+          </span>
+        </div>
+
+        {/* 진행 바 */}
+        <div className={styles.progressBar}>
+          <div
+            className={styles.progressBarFill}
+            style={{
+              width: `${Math.min(
+                (conversationStage / MAX_CONVERSATION_STAGES) * 100,
+                100
+              )}%`,
+            }}
+          />
+        </div>
+
+        {/* 단계별 마커 */}
         <div className={styles.progressSteps}>
-          <div className={styles.stageLabel}>
-            현재 단계: {getStageDescription(conversationStage)}
-          </div>
           {Array.from({ length: MAX_CONVERSATION_STAGES + 1 }).map(
             (_, index) => (
               <div
                 key={index}
                 className={`${styles.progressStep} ${
                   index < conversationStage
-                    ? styles.completed // 완료된 단계
+                    ? styles.completed
                     : index === conversationStage && !isLoading
-                    ? styles.active // 현재 활성 단계 (로딩 아님)
+                    ? styles.active
                     : index === conversationStage && isLoading
-                    ? styles.current // 현재 로딩 중인 단계
-                    : "" // 아직 도달 못한 단계
+                    ? styles.current
+                    : ""
                 }`}
               >
-                <span>
-                  {index < MAX_CONVERSATION_STAGES
-                    ? `단계 ${index + 1}`
-                    : "결론"}
-                </span>
+                <div className={styles.stepMarker}>{index + 1}</div>
+                <span className={styles.stepText}>{getStepLabel(index)}</span>
               </div>
             )
           )}
