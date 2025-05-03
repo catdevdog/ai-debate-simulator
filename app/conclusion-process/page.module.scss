@@ -1,5 +1,5 @@
 // 색상 변수 정의
-:root {
+:global(:root) {
   --primary-color: #4f46e5;
   --primary-hover: #4338ca;
   --secondary-color: #f3f4f6;
